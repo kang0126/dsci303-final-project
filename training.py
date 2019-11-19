@@ -5,16 +5,19 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
 raw_df = pd.read_csv('IMDB-Movie-Data.csv')
-raw_array = raw_df.values
+
+# remove lines with missing data
+valid_df = raw_df.dropna()
+valid_array = valid_df.values
 
 # extract x (input) and y (output) from the raw data
-# process x (convert text to quantifiable values, check for missing data, etc.)
+
 
 #### Linear Regression ####
-features = raw_df[['Rating', 'Votes', 'Metascore']]
-revenue = raw_df[['Revenue (Millions)']]
-for data in raw_df.to_numpy():
-    print(data)
+features = valid_df[['Rating', 'Votes', 'Metascore']]
+revenue = valid_df[['Revenue (Millions)']]
+# for data in raw_df.to_numpy():
+#     print(data)
 features = features.to_numpy()
 revenue = revenue.to_numpy()
 K = 10
