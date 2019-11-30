@@ -154,7 +154,7 @@ print('Naive bayes test error: %g' % (y_test != y_hat).mean())
 # https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
 def applyRandomForest(X_train, y_train, X_test):
-    clf = RandomForestClassifier(n_estimators=32, oob_score=True)
+    clf = RandomForestClassifier(n_estimators=16, oob_score=True)
     clf.fit(X_train, y_train)
     # clf.fit(features, clf_revenue)
     y_predict = clf.predict(X_test)

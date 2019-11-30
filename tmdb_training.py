@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-
+import matplotlib.pyplot as plt
 
 tmdb = pd.read_csv('tmdb.csv')
 tmdb = tmdb[tmdb['budget'] > 100]
@@ -54,7 +54,6 @@ revenue = np.array(tmdb[['revenue']])
 
 
 
-
 def classify(num):
     if num < 3.5e7:
         return 0
@@ -68,8 +67,17 @@ perm = np.random.permutation(features.shape[0])
 X_train, y_train = features[perm[:n_train], :], clf_revenue[perm[:n_train]]
 X_test, y_test = features[perm[n_train:], :], clf_revenue[perm[n_train:]]
 
+# X_train, y_train = features[:n_train, :], clf_revenue[:n_train]
+# X_test, y_test = features[n_train:, :], clf_revenue[n_train:]
+
 
 def applyNaiveBayes(X_train, y_train, X_test):
+    # quantized_train_features = X_train[:, [0,3]]
+    # quantized_test_features = X_test[:, [0,3]]
+    #
+    # X_train = X_train[:,[1,2,4,5]]
+    # X_test = X_test[:, [1, 2, 4, 5]]
+
     # Feature Quantization
     training_median = np.median(X_train, axis=0)
     Q_train = X_train - training_median
@@ -78,6 +86,9 @@ def applyNaiveBayes(X_train, y_train, X_test):
     Q_test = X_test - training_median
     Q_test[Q_test < 0] = 0
     Q_test[Q_test > 0] = 1
+
+    # Q_train = np.concatenate((Q_train, quantized_train_features), axis = 1)
+    # Q_test = np.concatenate((Q_test, quantized_test_features), axis=1)
 
     zeros = np.argwhere(y_train == 0)
     ones = np.argwhere(y_train == 1)
@@ -106,11 +117,12 @@ print('Naive bayes test error: %g' % (y_test != y_hat).mean())
 
 
 def applyRandomForest(X_train, y_train, X_test):
-    clf = RandomForestClassifier(n_estimators=32, oob_score=True)
+    clf = RandomForestClassifier(n_estimators = 20, oob_score=True)
     clf.fit(X_train, y_train)
     # clf.fit(features, clf_revenue)
     y_predict = clf.predict(X_test)
     return y_predict
+
 
 y_hat = applyRandomForest(X_train, y_train, X_test)
 print ('Random forest test error: %g' % (y_hat != y_test).mean())
