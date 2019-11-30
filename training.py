@@ -49,7 +49,7 @@ revenue = revenue.to_numpy()
 ###############################################################################################
 #                                   Feature Selection                                         #
 ###############################################################################################
-print (np.median(revenue))
+
 
 
 ###############################################################################################
@@ -90,6 +90,15 @@ print (np.median(revenue))
 # code from assignments?
 
 # regression models
+
+
+def classify(num):
+    if num < 50:
+        return 0
+    else:
+        return 1
+clf_revenue = np.apply_along_axis(classify, 1, revenue)
+
 ###############################################################################################
 #                                       Naive Bayes                                           #
 ###############################################################################################
@@ -127,16 +136,8 @@ def applyNaiveBayes(X_train, y_train, X_test):
     return y_predict
 
 
+
 n_train = 700
-
-
-def classify(num):
-    if num < 50:
-        return 0
-    else:
-        return 1
-clf_revenue = np.apply_along_axis(classify, 1, revenue)
-
 perm = np.random.permutation(features.shape[0])
 X_train, y_train = features[perm[:n_train], :], clf_revenue[perm[:n_train]]
 X_test, y_test = features[perm[n_train:], :], clf_revenue[perm[n_train:]]
@@ -145,24 +146,25 @@ X_test, y_test = features[perm[n_train:], :], clf_revenue[perm[n_train:]]
 y_hat = applyNaiveBayes(X_train, y_train, X_test)
 print('Naive bayes test error: %g' % (y_test != y_hat).mean())
 
+
 ###############################################################################################
 #                                       Random Forest                                         #
 ###############################################################################################
 # https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
-"""
-n_train = 700
 
-def classify(num):
-    if num < 50: return 0
-    else: return 1
-    
-clf_revenue = np.apply_along_axis(classify, 1, revenue)
+def applyRandomForest(X_train, y_train, X_test):
+    clf = RandomForestClassifier(n_estimators=32, oob_score=True)
+    clf.fit(X_train, y_train)
+    # clf.fit(features, clf_revenue)
+    y_predict = clf.predict(X_test)
+    return y_predict
 
-X_train, y_train = features[:n_train, :], clf_revenue[:n_train]
-X_test, y_test = features[n_train:, :], clf_revenue[n_train:]
+y_hat = applyRandomForest(X_train, y_train, X_test)
+print ('Random forest test error: %g' % (y_hat != y_test).mean())
 
 
-"""
+
+
 # num_trees_range = range(2,40,2)
 # oob_score_record = []
 # for num_trees in num_trees_range:
@@ -177,18 +179,6 @@ X_test, y_test = features[n_train:, :], clf_revenue[n_train:]
 # idx = np.argmax(oob_score_record)
 # num_trees = num_trees_range[idx]
 # print ("Using {} trees to train the random forest model has oob score {}".format(num_trees, oob_score_record[idx]))
-"""
-
-
-clf = RandomForestClassifier(n_estimators = 32, oob_score= True)
-clf.fit(X_train,y_train)
-# clf.fit(features, clf_revenue)
-y_predict = clf.predict(X_test)
-print ('Random forest test error: %g' % (y_predict != y_test).mean())
-Pclass = (clf_revenue[:, None] == np.arange(2)[None, :]).mean(0)
-print ('Majority class error: %g' % (clf_revenue != np.argmax(Pclass)).mean())
-
-"""
 
 
 
