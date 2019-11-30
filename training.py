@@ -92,6 +92,7 @@ revenue = revenue.to_numpy()
 # regression models
 
 
+
 def classify(num):
     if num < 50:
         return 0
