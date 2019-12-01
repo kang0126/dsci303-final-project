@@ -21,6 +21,10 @@ companies = ["Paramount", "MGM", "Disney", "DreamWorks", "Twentieth", "Universal
 tmdb['belongs_to_collection'] = tmdb['belongs_to_collection'].apply(lambda x:  int(type(x) is not float))
 # tmdb['original_language'] = tmdb['original_language'].apply(lambda x: x == 'en')
 
+
+
+
+
 def starV(str):
     if type(str) is float:
         return 0
@@ -46,8 +50,28 @@ def companyV(str):
             continue
     return 0
 
+def str2list(str):
+    if type(str) is float:
+        return 0
+
+    str_list = list(filter(lambda x: x.startswith("'name':"), str.split(", ")))
+    genre_list = []
+
+    for i in range(len(str_list)):
+        part = str_list[i]
+        if i == len(str_list) - 1:
+            genre = part[9 : -3]
+        else:
+
+            genre = part[9:-2]
+        genre_list.append(genre)
+    return genre_list
+
 tmdb['starValue'] = tmdb['cast'].apply(starV)
 tmdb['companyValue'] = tmdb['production_companies'].apply(companyV)
+tmdb['genres_list'] = tmdb['genres'].apply(str2list)
+
+print (tmdb['genres_list'])
 
 features = np.array(tmdb[['belongs_to_collection', 'budget',  'popularity', 'companyValue', 'runtime', 'starValue']])
 revenue = np.array(tmdb[['revenue']])
