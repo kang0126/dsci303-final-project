@@ -9,14 +9,13 @@ import matplotlib.pyplot as plt
 import math
 
 
-
 # Load the data and reference info data
 raw_df = pd.read_csv('IMDB-Movie-Data.csv')
 directors_df = pd.read_csv('Top-Directors.csv', encoding = "ISO-8859-1")
 acts_df = pd.read_csv('Top-1000-Actors-Actresses.csv', encoding = "ISO-8859-1")
 directors = directors_df['Name'].tolist()
 acts = acts_df['Name'].tolist()
-#
+
 # tmdb = pd.read_csv('train.csv')
 # print (tmdb)
 
