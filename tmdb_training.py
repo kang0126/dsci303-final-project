@@ -6,33 +6,31 @@ from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 
 tmdb = pd.read_csv('tmdb.csv')
+
+###### FEATURE PRE-PROCESSING #######
+
+# BUDGET - remove data entries with unreasonable budgets
 tmdb = tmdb[tmdb['budget'] > 100]
+
+# LANGUAGE - remove data entries that are non-English
 tmdb = tmdb[tmdb['original_language'] == 'en']
 
-directors_df = pd.read_csv('Top-Directors.csv', encoding="ISO-8859-1")
-acts_df = pd.read_csv('Top-1000-Actors-Actresses.csv', encoding="ISO-8859-1")
-directors = directors_df['Name'].tolist()
-acts = acts_df['Name'].tolist()
-companies = ['paramount', 'mgm', 'disney', 'dreamworks', 'twentieth', 'universal', 'lionsgate', 'warner', 'columbia']
-genres_sorted = ['Drama', 'Comedy', 'Thriller', 'Action', 'Romance', 'Crime', 'Adventure', 'Science Fiction', 'Horror',
-                 'Family', 'Mystery', 'Fantasy', 'Animation', 'History', 'Music', 'War', 'Western', 'Documentary',
-                 'Foreign', 'TV Movie']
-genres_counter = Counter(
-    {'Drama': 935, 'Comedy': 653, 'Thriller': 581, 'Action': 534, 'Romance': 351, 'Crime': 348, 'Adventure': 345,
-     'Science Fiction': 232, 'Horror': 227, 'Family': 187, 'Mystery': 167, 'Fantasy': 167, 'Animation': 85,
-     'History': 80, 'Music': 67, 'War': 64, 'Western': 29, 'Documentary': 19, 'Foreign': 4, 'TV Movie': 1})
-
-# features = tmdb[['belongs_to_collection', 'budget', 'genres', 'original_language', 'popularity', 'production_companies',
-#                  'runtime', 'cast']]
-# revenue = tmdb['revenue']
-
+# BELONGS TO A COLLECTION - boolean value indicating whether a movie belongs to a collection
 tmdb['belongs_to_collection'] = tmdb['belongs_to_collection'].apply(lambda x: int(type(x) is not float))
 
+# DIRECTORS - *** NOT USED ***
+directors_df = pd.read_csv('Top-Directors.csv', encoding="ISO-8859-1")
+directors = directors_df['Name'].tolist()
 
-# tmdb['original_language'] = tmdb['original_language'].apply(lambda x: x == 'en')
+# ACTORS - STAR VALUES
+acts_df = pd.read_csv('Top-1000-Actors-Actresses.csv', encoding="ISO-8859-1")
+acts = acts_df['Name'].tolist()
 
 
 def starV(str):
+    """
+    returns a star value based on TODO...
+    """
     if type(str) is float:
         return 0
 
@@ -45,7 +43,16 @@ def starV(str):
     return val
 
 
+tmdb['starValue'] = tmdb['cast'].apply(starV)
+
+# PRODUCTION COMPANIES - major companies
+companies = ['paramount', 'mgm', 'disney', 'dreamworks', 'twentieth', 'universal', 'lionsgate', 'warner', 'columbia']
+
+
 def companyV(str):
+    """
+    returns boolean value indicating whether a movie was produced by one of the major companies.
+    """
     if type(str) is float:
         return 0
 
@@ -59,7 +66,31 @@ def companyV(str):
     return 0
 
 
+tmdb['companyValue'] = tmdb['production_companies'].apply(companyV)
+
+# GENRES - a) 20 boolean values for each genre  b) 2 boolean variables indicating popular & unpopular
+genres_counter = Counter(
+    {'Drama': 935, 'Comedy': 653, 'Thriller': 581, 'Action': 534, 'Romance': 351, 'Crime': 348, 'Adventure': 345,
+     'Science Fiction': 232, 'Horror': 227, 'Family': 187, 'Mystery': 167, 'Fantasy': 167, 'Animation': 85,
+     'History': 80, 'Music': 67, 'War': 64, 'Western': 29, 'Documentary': 19, 'Foreign': 4, 'TV Movie': 1})
+
+genres_sorted = ['Drama', 'Comedy', 'Thriller', 'Action', 'Romance', 'Crime', 'Adventure', 'Science Fiction', 'Horror',
+                 'Family', 'Mystery', 'Fantasy', 'Animation', 'History', 'Music', 'War', 'Western', 'Documentary',
+                 'Foreign', 'TV Movie']
+
+# genres that have a median of >= $35 million
+genres_popular = ['Comedy', 'Thriller', 'Action', 'Crime', 'Adventure', 'Science Fiction', 'Family', 'Fantasy',
+                  'Animation']
+
+# genres that have a median of < $35 million
+genres_unpopular = ['Drama', 'Romance', 'Horror', 'Mystery', 'History', 'Music', 'War', 'Western', 'Documentary',
+                    'Foreign', 'TV Movie']
+
+
 def str2list(str):
+    """
+    returns a list of genres for each movie
+    """
     if type(str) is float:
         return []
 
@@ -77,75 +108,28 @@ def str2list(str):
     return genre_list
 
 
-tmdb['starValue'] = tmdb['cast'].apply(starV)
-tmdb['companyValue'] = tmdb['production_companies'].apply(companyV)
 tmdb['genres_list'] = tmdb['genres'].apply(str2list)
-
-
-# print (tmdb['genres_list'])
-
-def convert_genre(genre_lst, genre):
-    return 1 if genre in genre_lst else 0
-
 
 for genre in genres_sorted:
     tmdb[genre] = tmdb['genres_list'].apply(lambda x: 1 if genre in x else 0)
 
-features = np.array(tmdb[['belongs_to_collection', 'budget', 'popularity', 'companyValue', 'runtime', 'starValue']])
+
+def share_common_element(lst0, lst1):
+    for a in lst0:
+        if a in lst1:
+            return True
+    return False
+
+
+tmdb['popular_genre'] = tmdb['genres_list'].apply(lambda x: 1 if share_common_element(x, genres_popular) else 0)
+tmdb['unpopular_genre'] = tmdb['genres_list'].apply(lambda x: 1 if share_common_element(x, genres_unpopular) else 0)
+
+print(tmdb['popular_genre'])
+print(tmdb['unpopular_genre'])
+
+
+# REVENUE - boolean value indicating if above median ($35 million)
 revenue = np.array(tmdb[['revenue']])
-
-features_with_binary_genres = np.array(
-    tmdb[['belongs_to_collection', 'budget', 'popularity', 'companyValue', 'runtime', 'starValue'] + genres_sorted])
-
-genre_box_plot_data = []
-genres_to_plot = genres_sorted[0:5] + genres_sorted[6:15]
-for genre in genres_to_plot:
-    movies = np.array(tmdb[tmdb[genre] == 1]['revenue'])
-    genre_box_plot_data.append(movies)
-    # print('=-=-=-=-=-=-=-=-=-=')
-    # print(genre)
-    # print(np.mean(movies))
-    # print(np.median(movies))
-    # print(np.std(movies))
-
-# Create a figure instance
-fig = plt.figure(1, figsize=(9, 6))
-
-# Create an axes instance
-ax = fig.add_subplot(111)
-
-# Save the figure
-# fig.savefig('fig1.png', bbox_inches='tight')
-
-bp = ax.boxplot(genre_box_plot_data, patch_artist=True)
-for box in bp['boxes']:
-    # change outline color
-    box.set(color='#7570b3', linewidth=2)
-    # change fill color
-    box.set(facecolor='#1b9e77')
-
-## change color and linewidth of the whiskers
-for whisker in bp['whiskers']:
-    whisker.set(color='#7570b3', linewidth=2)
-
-## change color and linewidth of the caps
-for cap in bp['caps']:
-    cap.set(color='#7570b3', linewidth=2)
-
-## change color and linewidth of the medians
-for median in bp['medians']:
-    median.set(color='#b2df8a', linewidth=2)
-
-## change the style of fliers and their fill
-for flier in bp['fliers']:
-    flier.set(marker='o', color='#e7298a', alpha=0.5)
-
-ax.set_xticklabels(genres_to_plot)
-
-ax.get_xaxis().tick_bottom()
-ax.get_yaxis().tick_left()
-
-plt.show()
 
 
 def classify(num):
@@ -157,20 +141,33 @@ def classify(num):
 
 clf_revenue = np.apply_along_axis(classify, 1, revenue)
 
+
+##### Training/Testing Data #####
 n_train = 1500
-perm = np.random.permutation(features.shape[0])
-X_train, y_train = features[perm[:n_train], :], clf_revenue[perm[:n_train]]
-X_test, y_test = features[perm[n_train:], :], clf_revenue[perm[n_train:]]
+
+# below are the different combinations of features we could use
+features = np.array(tmdb[['belongs_to_collection', 'budget', 'popularity', 'companyValue', 'runtime', 'starValue']])
+
+features_with_binary_genres = np.array(
+    tmdb[['belongs_to_collection', 'budget', 'popularity', 'companyValue', 'runtime', 'starValue'] + genres_sorted])
+
+features_with_processed_genres = np.array(tmdb[['belongs_to_collection', 'budget', 'popularity', 'companyValue',
+                                                'runtime', 'starValue', 'popular_genre', 'unpopular_genre']])
+
+# !!! modify this variable to change the features to use
+features_to_use = features_with_processed_genres
+
+# generate training/testing data
+# X_train, y_train = features_to_use[:n_train, :], clf_revenue[:n_train]
+# X_test, y_test = features_to_use[n_train:, :], clf_revenue[n_train:]
+
+# shuffling the data & generate training/testing data
+perm = np.random.permutation(features_to_use.shape[0])
+X_train, y_train = features_to_use[perm[:n_train], :], clf_revenue[perm[:n_train]]
+X_test, y_test = features_to_use[perm[n_train:], :], clf_revenue[perm[n_train:]]
 
 
-# perm = np.random.permutation(features_with_binary_genres.shape[0])
-# X_train, y_train = features_with_binary_genres[perm[:n_train], :], clf_revenue[perm[:n_train]]
-# X_test, y_test = features_with_binary_genres[perm[n_train:], :], clf_revenue[perm[n_train:]]
-
-# X_train, y_train = features[:n_train, :], clf_revenue[:n_train]
-# X_test, y_test = features[n_train:, :], clf_revenue[n_train:]
-
-
+##### MODELS/ALGORITHMS #####
 def applyNaiveBayes(X_train, y_train, X_test):
     # quantized_train_features = X_train[:, [0,3]]
     # quantized_test_features = X_test[:, [0,3]]
@@ -180,6 +177,12 @@ def applyNaiveBayes(X_train, y_train, X_test):
 
     # Feature Quantization
     training_median = np.median(X_train, axis=0)
+
+    # TODO MODIFY THIS IF FEATURES ARE CHANGED
+    # cast the medians of boolean variables to 0.5
+    for i in [0, 3, 6, 7]:
+        training_median[i] = 0.5
+
     Q_train = X_train - training_median
     Q_train[Q_train < 0] = 0
     Q_train[Q_train > 0] = 1
@@ -214,12 +217,12 @@ def applyNaiveBayes(X_train, y_train, X_test):
     return y_predict
 
 
-y_hat = applyNaiveBayes(X_train, y_train, X_test)
-print('Naive bayes test error: %g' % (y_test != y_hat).mean())
+# y_hat = applyNaiveBayes(X_train, y_train, X_test)
+# print('Naive bayes test error: %g' % (y_test != y_hat).mean())
 
 
-def applyRandomForest(X_train, y_train, X_test):
-    clf = RandomForestClassifier(n_estimators=20, oob_score=True)
+def applyRandomForest(X_train, y_train, X_test, n_trees=20):
+    clf = RandomForestClassifier(n_estimators=n_trees, oob_score=True)
     clf.fit(X_train, y_train)
     # clf.fit(features, clf_revenue)
     y_predict = clf.predict(X_test)
@@ -229,3 +232,50 @@ def applyRandomForest(X_train, y_train, X_test):
 
 y_hat = applyRandomForest(X_train, y_train, X_test)
 print ('Random forest test error: %g' % (y_hat != y_test).mean())
+
+
+##### VISUALIZATION #####
+def plot_genre_box():
+    genre_box_plot_data = []
+    genres_to_plot = genres_sorted[0:5] + genres_sorted[6:15]
+    for genre in genres_to_plot:
+        movies = np.array(tmdb[tmdb[genre] == 1]['revenue'])
+        genre_box_plot_data.append(movies)
+        # print('=-=-=-=-=-=-=-=-=-=')
+        # print(genre)
+        # print(np.mean(movies))
+        # print(np.median(movies))
+        # print(np.std(movies))
+
+    fig = plt.figure(1, figsize=(9, 6))
+    ax = fig.add_subplot(111)
+
+    bp = ax.boxplot(genre_box_plot_data, patch_artist=True)
+    for box in bp['boxes']:
+        # change outline color
+        box.set(color='#7570b3', linewidth=2)
+        # change fill color
+        box.set(facecolor='#1b9e77')
+
+    ## change color and linewidth of the whiskers
+    for whisker in bp['whiskers']:
+        whisker.set(color='#7570b3', linewidth=2)
+
+    ## change color and linewidth of the caps
+    for cap in bp['caps']:
+        cap.set(color='#7570b3', linewidth=2)
+
+    ## change color and linewidth of the medians
+    for median in bp['medians']:
+        median.set(color='#b2df8a', linewidth=2)
+
+    ## change the style of fliers and their fill
+    for flier in bp['fliers']:
+        flier.set(marker='o', color='#e7298a', alpha=0.5)
+
+    ax.set_xticklabels(genres_to_plot)
+
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+    plt.show()
