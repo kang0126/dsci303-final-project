@@ -1,8 +1,8 @@
 from collections import Counter
-
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 import matplotlib.pyplot as plt
 
 tmdb = pd.read_csv('tmdb.csv')
@@ -124,10 +124,6 @@ def share_common_element(lst0, lst1):
 tmdb['popular_genre'] = tmdb['genres_list'].apply(lambda x: 1 if share_common_element(x, genres_popular) else 0)
 tmdb['unpopular_genre'] = tmdb['genres_list'].apply(lambda x: 1 if share_common_element(x, genres_unpopular) else 0)
 
-print(tmdb['popular_genre'])
-print(tmdb['unpopular_genre'])
-
-
 # REVENUE - boolean value indicating if above median ($35 million)
 revenue = np.array(tmdb[['revenue']])
 
@@ -141,7 +137,6 @@ def classify(num):
 
 clf_revenue = np.apply_along_axis(classify, 1, revenue)
 
-
 ##### Training/Testing Data #####
 n_train = 1500
 
@@ -154,7 +149,7 @@ features_with_binary_genres = np.array(
 features_with_processed_genres = np.array(tmdb[['belongs_to_collection', 'budget', 'popularity', 'companyValue',
                                                 'runtime', 'starValue', 'popular_genre', 'unpopular_genre']])
 
-# !!! modify this variable to change the features to use
+# TODO modify this variable to change the features to use
 features_to_use = features_with_processed_genres
 
 # generate training/testing data
@@ -168,6 +163,27 @@ X_test, y_test = features_to_use[perm[n_train:], :], clf_revenue[perm[n_train:]]
 
 
 ##### MODELS/ALGORITHMS #####
+
+# MODEL EVALUATION
+def compute_f1(true, pred):
+    total = len(true)
+    tp = fp = fn = 0
+    for i in range(total):
+        if true[i] == pred[i]:
+            if true[i] == 1:
+                tp += 1
+        else:
+            if true[i] == 1:
+                fn += 1
+            else:
+                fp += 1
+
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    return precision, recall, 2 * precision * recall / (precision + recall)
+
+
+# NAIVE BAYES
 def applyNaiveBayes(X_train, y_train, X_test):
     # quantized_train_features = X_train[:, [0,3]]
     # quantized_test_features = X_test[:, [0,3]]
@@ -217,10 +233,16 @@ def applyNaiveBayes(X_train, y_train, X_test):
     return y_predict
 
 
-# y_hat = applyNaiveBayes(X_train, y_train, X_test)
-# print('Naive bayes test error: %g' % (y_test != y_hat).mean())
+print('=-=-=-= Naive Bayes =-=-=-=')
+y_hat = applyNaiveBayes(X_train, y_train, X_test)
+print('Naive bayes test error: %g' % (y_test != y_hat).mean())
+p, r, f1 = compute_f1(y_test, y_hat)
+print('Precision: {}'.format(p))
+print('Recall: {}'.format(r))
+print('F1 Score: {}'.format(f1))
 
 
+# RANDOM FOREST
 def applyRandomForest(X_train, y_train, X_test, n_trees=20):
     clf = RandomForestClassifier(n_estimators=n_trees, oob_score=True)
     clf.fit(X_train, y_train)
@@ -230,8 +252,24 @@ def applyRandomForest(X_train, y_train, X_test, n_trees=20):
     return y_predict
 
 
-y_hat = applyRandomForest(X_train, y_train, X_test)
-print ('Random forest test error: %g' % (y_hat != y_test).mean())
+print('=-=-=-= Random Forest =-=-=-=')
+for n_trees in range(2, 22, 2):
+    print('=-=-=-= {} Trees =-=-=-='.format(n_trees))
+    y_hat = applyRandomForest(X_train, y_train, X_test, n_trees)
+    print ('Random forest test error: %g' % np.mean((y_hat != y_test)))
+    p, r, f1 = compute_f1(y_test, y_hat)
+    print('Precision: {}'.format(p))
+    print('Recall: {}'.format(r))
+    print('F1 Score: {}'.format(f1))
+
+
+# FEEDFORWARD NEURAL NETWORK
+# nnclf = MLPClassifier(hidden_layer_sizes=(10,),
+#                       activation='relu',
+#                       solver='lbfgs',
+#                       )
+# nnclf.fit(X_train, y_train)
+# print(nnclf.score(X_test, y_test))
 
 
 ##### VISUALIZATION #####
