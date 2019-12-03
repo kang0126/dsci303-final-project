@@ -2,6 +2,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 import matplotlib.pyplot as plt
 
@@ -29,7 +30,7 @@ acts = acts_df['Name'].tolist()
 
 def starV(str):
     """
-    returns a star value based on TODO...
+    returns an integer indicating number of top 1000 actors and actresses who starred in this movie
     """
     if type(str) is float:
         return 0
@@ -187,6 +188,19 @@ def compute_f1(true, pred):
 
     return precision, recall, 2 * precision * recall / (precision + recall)
 
+
+def applyLogisticRegr(X_train, y_train, X_test):
+    logisticRegr = LogisticRegression()
+    logisticRegr.fit(X_train, y_train)
+    return (logisticRegr.predict(X_test))
+
+print('=-=-=-= Logistic Regression =-=-=-=')
+y_hat = applyLogisticRegr(X_train, y_train, X_test)
+print('Logistic Regression test error: %g' % (y_test != y_hat).mean())
+p, r, f1 = compute_f1(y_test, y_hat)
+print('Precision: {}'.format(p))
+print('Recall: {}'.format(r))
+print('F1 Score: {}'.format(f1))
 
 # NAIVE BAYES
 def applyNaiveBayes(X_train, y_train, X_test):
