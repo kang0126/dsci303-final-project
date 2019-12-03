@@ -167,11 +167,13 @@ X_test, y_test = features_to_use[perm[n_train:], :], clf_revenue[perm[n_train:]]
 # MODEL EVALUATION
 def compute_f1(true, pred):
     total = len(true)
-    tp = fp = fn = 0
+    tp = tn = fp = fn = 0
     for i in range(total):
         if true[i] == pred[i]:
             if true[i] == 1:
                 tp += 1
+            else:
+                tn += 1
         else:
             if true[i] == 1:
                 fn += 1
@@ -180,6 +182,9 @@ def compute_f1(true, pred):
 
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
+
+    print(tp, tn, fp, fn)
+
     return precision, recall, 2 * precision * recall / (precision + recall)
 
 
@@ -228,39 +233,69 @@ def applyNaiveBayes(X_train, y_train, X_test):
         yes = num_ones / n_train * np.prod(np.abs(arr - no_yes))
         return int(no < yes)
 
+    y_predict_training = np.apply_along_axis(predict, 1, Q_train)
     y_predict = np.apply_along_axis(predict, 1, Q_test)
 
-    return y_predict
+    return y_predict_training, y_predict
 
 
 print('=-=-=-= Naive Bayes =-=-=-=')
-y_hat = applyNaiveBayes(X_train, y_train, X_test)
-print('Naive bayes test error: %g' % (y_test != y_hat).mean())
-p, r, f1 = compute_f1(y_test, y_hat)
+y_hat_train, y_hat_test = applyNaiveBayes(X_train, y_train, X_test)
+
+# training error
+print('Training Error: %g' % np.mean(y_train != y_hat_train))
+p, r, f1 = compute_f1(y_train, y_hat_train)
 print('Precision: {}'.format(p))
 print('Recall: {}'.format(r))
-print('F1 Score: {}'.format(f1))
+print('F1 Score: {}\n'.format(f1))
+
+# testing error
+print('Testing Error: %g' % np.mean(y_test != y_hat_test))
+p, r, f1 = compute_f1(y_test, y_hat_test)
+print('Precision: {}'.format(p))
+print('Recall: {}'.format(r))
+print('F1 Score: {}\n'.format(f1))
 
 
 # RANDOM FOREST
-def applyRandomForest(X_train, y_train, X_test, n_trees=20):
+def applyRandomForest(X_train, y_train, X_test, n_trees=16):
     clf = RandomForestClassifier(n_estimators=n_trees, oob_score=True)
     clf.fit(X_train, y_train)
-    # clf.fit(features, clf_revenue)
     y_predict = clf.predict(X_test)
-    print(clf.feature_importances_)
-    return y_predict
+    y_predict_training = clf.predict(X_train)
+    return y_predict_training, y_predict, clf.oob_score_, clf.feature_importances_
 
 
 print('=-=-=-= Random Forest =-=-=-=')
-for n_trees in range(2, 22, 2):
-    print('=-=-=-= {} Trees =-=-=-='.format(n_trees))
-    y_hat = applyRandomForest(X_train, y_train, X_test, n_trees)
-    print ('Random forest test error: %g' % np.mean((y_hat != y_test)))
-    p, r, f1 = compute_f1(y_test, y_hat)
-    print('Precision: {}'.format(p))
-    print('Recall: {}'.format(r))
-    print('F1 Score: {}'.format(f1))
+y_hat_training, y_hat_test, obb_score, feature_importances = applyRandomForest(X_train, y_train, X_test, 16)
+
+# Training Error
+print ('Training Error: %g' % np.mean((y_hat_training != y_train)))
+p, r, f1 = compute_f1(y_train, y_hat_training)
+print('Precision: {}'.format(p))
+print('Recall: {}'.format(r))
+print('F1 Score: {}\n'.format(f1))
+
+# Testing Error
+print ('Testing Error: %g' % np.mean((y_hat_test != y_test)))
+p, r, f1 = compute_f1(y_test, y_hat_test)
+print('Precision: {}'.format(p))
+print('Recall: {}'.format(r))
+print('F1 Score: {}\n'.format(f1))
+
+print(feature_importances)
+
+
+def choose_trees_plot():
+    oob = []
+    for n_trees in range(2, 22, 2):
+        y_hat_train, y_hat, obb_score, feature_importances = applyRandomForest(X_train, y_train, X_test, n_trees)
+        oob.append(obb_score)
+
+    plt.plot(range(2, 22, 2), oob)
+    plt.xlabel('Number of Trees')
+    plt.ylabel('OOB Scores')
+    plt.show()
 
 
 # FEEDFORWARD NEURAL NETWORK
@@ -277,7 +312,7 @@ def plot_genre_box():
     genre_box_plot_data = []
     genres_to_plot = genres_sorted[0:5] + genres_sorted[6:15]
     for genre in genres_to_plot:
-        movies = np.array(tmdb[tmdb[genre] == 1]['revenue'])
+        movies = np.array(tmdb[tmdb[genre] == 1]['revenue']) / 1000000
         genre_box_plot_data.append(movies)
         # print('=-=-=-=-=-=-=-=-=-=')
         # print(genre)
@@ -311,9 +346,14 @@ def plot_genre_box():
     for flier in bp['fliers']:
         flier.set(marker='o', color='#e7298a', alpha=0.5)
 
-    ax.set_xticklabels(genres_to_plot)
+    xlabel = genres_to_plot[:]
+    xlabel[6] = 'SciFi'
+    ax.set_xticklabels(xlabel)
 
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
 
+    ax.hlines(35, xmin=1, xmax=14, color='r')
+
     plt.show()
+
